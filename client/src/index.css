@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #F4F1EC;
+    color: #2C2825;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, .font-editorial {
+    font-family: 'Fraunces', Georgia, serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Tactile Neumorphic Buttons & Elements */
+.btn-nm {
+  background-color: #F4F1EC;
+  box-shadow: 4px 4px 10px #d8d3ca, -4px -4px 10px #ffffff;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-nm:hover {
+  box-shadow: 6px 6px 14px #d4cebe, -6px -6px 14px #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-nm:active {
+  box-shadow: inset 3px 3px 6px #d8d3ca, inset -3px -3px 6px #ffffff;
+  transform: translateY(1px);
+}
+
+/* Primary Terracotta Tactile Button */
+.btn-terracotta {
+  background-color: #C4623A;
+  color: #ffffff;
+  box-shadow: 4px 4px 12px rgba(196, 98, 58, 0.3), -3px -3px 8px #ffffff;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-terracotta:hover {
+  background-color: #AD522D;
+  box-shadow: 6px 6px 16px rgba(196, 98, 58, 0.4), -4px -4px 10px #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-terracotta:active {
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.25);
+  transform: translateY(1px);
+}
+
+/* Pressed Well / Inset Input */
+.nm-inset {
+  background-color: #EFECE6;
+  box-shadow: inset 2px 2px 5px #d8d3ca, inset -2px -2px 5px #ffffff;
+}
+
+/* Soft Neumorphic Embossed Card */
+.card-nm {
+  background-color: #F4F1EC;
+  box-shadow: 6px 6px 16px #d8d3ca, -6px -6px 16px #ffffff;
+  border: 1px solid #ECE7DC;
+}
+
+/* Embossed skeleton loader with soft pulse */
+@keyframes nm-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: inset 2px 2px 5px #d8d3ca, inset -2px -2px 5px #ffffff;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: inset 3px 3px 8px #cdc7ba, inset -3px -3px 8px #ffffff;
+  }
+}
+
+.nm-skeleton {
+  background-color: #ECE7DC;
+  animation: nm-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Accessible high-contrast focus rings for WCAG AA compliance */
+*:focus-visible {
+  outline: 2px solid #C4623A !important;
+  outline-offset: 2px !important;
+}
+
+/* Print CSS for clean Document Export */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  header, nav, footer, .no-print, .btn-nm, .card-nm:not(#printable-document-card) {
+    display: none !important;
+  }
+  #printable-document-card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+  #printable-document {
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    padding: 0 !important;
+  }
+  .card-nm {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+    break-inside: avoid;
+  }
+  .fixed.inset-0 {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+}
