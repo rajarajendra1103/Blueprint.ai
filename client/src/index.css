@@ -90,6 +90,32 @@
   outline-offset: 2px !important;
 }
 
+/* Custom Sleek Scrollbar for modals and scroll containers */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #C4623A #EFECE6;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #EFECE6;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #C4623A;
+  border-radius: 9999px;
+  border: 2px solid #EFECE6;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #AD522D;
+}
+
 /* Print CSS for clean Document Export */
 @media print {
   body {

@@ -1,5 +1,7 @@
 export type LLMProviderId =
   | 'gemini'
+  | 'claude'
+  | 'anthropic'
   | 'openrouter'
   | 'grok'
   | 'nvidia';
@@ -86,6 +88,7 @@ export interface SpecSection {
   content: string; // Markdown content
   originalContent?: string; // for before/after diff audit trail
   hasBeenEdited?: boolean;
+  isCustomGenerated?: boolean;
   parsedData?: any; // structured JSON representation where applicable
   tags?: string[];
   isApproved?: boolean;

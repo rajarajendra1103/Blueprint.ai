@@ -71,25 +71,25 @@ export function buildSectionPrompt(
 Format your output in clean, highly structured, professional GitHub-Flavored Markdown.
 
 CRITICAL FORMATTING RULES FOR ATTRACTIVE, PROFESSIONAL PRESENTATION:
-1. FLOWCHARTS & TOPOLOGIES (STRICTLY VERTICAL TOP-DOWN - MANDATORY):
-   - ALL architecture, deployment, data flow, and system topology diagrams MUST use \`flowchart TD\` (Top-to-Bottom).
-   - NEVER use \`flowchart LR\`, \`graph LR\`, or horizontal orientations. Horizontal flowcharts are strictly forbidden because they stretch into unreadable thin strips on screens and PDF documents.
-   - For multi-tier topologies (System Architecture, Deployment, Data Flow), stack tiers vertically from top to bottom:
-     * Tier 1 (Top): Client Tier / DNS / Edge CDN
-     * Tier 2: API Gateway / Ingress / Load Balancers
-     * Tier 3: Core Application Services / Microservices & Workers
-     * Tier 4 (Bottom): Data Layer (Databases, Caches, Event Brokers, Storage)
-   - Connect tiers vertically (\`tier1 --> tier2 --> tier3 --> tier4\`).
-   - If using \`subgraph\`, ALWAYS include \`direction TB\` inside each subgraph and keep subgraphs vertically stacked.
-   - Do NOT chain 10+ nodes horizontally in a single row.
-   - CRITICAL MERMAID SYNTAX RULES:
-     * Always enclose node labels in double quotes if they contain parentheses, ampersands, colons, slashes, or special characters, e.g.: \`clientTier["Client Tier (Web/Mobile)"] --> apiGw["API Gateway (Envoy & Kong)"]\`.
+1. FLOWCHARTS & TOPOLOGIES (STRICT RULES & DIAGRAM RESTRICTIONS):
+   - Flowcharts / diagrams are ONLY permitted for:
+     * Section 1: Architecture (flowchart TD)
+     * Section 4: Data Model (erDiagram)
+     * Section 7: Business Logic (stateDiagram-v2)
+     * Section 8: Deployment (flowchart TD)
+   - STRICTLY FORBIDDEN: DO NOT generate any flowchart or Mermaid diagram for Sections 10 to 13 (Cost Projections, Integrations, Testing Strategy, Risk Assumptions). Those sections MUST be presented exclusively as structured Markdown tables and formatted lists.
+   - When generating permitted diagrams:
+     * ALL architecture, deployment, data flow, and system topology diagrams MUST use \`flowchart TD\` (Top-to-Bottom).
+     * NEVER use \`flowchart LR\`, \`graph LR\`, or horizontal orientations.
+     * Stack tiers vertically from top to bottom (Client -> Gateway -> Application -> Data).
+     * Always enclose node labels in double quotes if they contain special characters: \`clientTier["Client Tier"] --> apiGw["API Gateway"]\`.
      * Do NOT put raw LaTeX math ($...$) or HTML inside Mermaid labels.
      * Use clean alphanumeric IDs for nodes: \`nodeA\`, \`nodeB\`, \`dbCluster\`.
 2. STRUCTURED TABLES: For requirements, endpoints, algorithms, tech comparisons, cost models, test pyramids, and risk matrices, ALWAYS format them as clean Markdown tables with column headers. Tables look significantly more attractive than long bullet walls.
 3. DO NOT OUTPUT TOP-LEVEL # TITLES: The UI already renders the section name in the card header. Do not repeat \`# System Architecture\` or \`## System Architecture\` at the beginning. Start directly with an executive summary, a Mermaid diagram, or \`### Subsection\` headings.
 4. NO *** OR --- DIVIDER SPAM: Do NOT use decorative separator lines (\`***\` or \`---\`) between paragraphs or items. They look cluttering and unstyled. Use semantic subheadings (\`###\`) and styled tables instead.
-5. Be deeply specific, technical, and concrete. Avoid generic placeholders or hand-waving.`;
+5. Be deeply specific, technical, and concrete. Avoid generic placeholders or hand-waving.
+6. ABSOLUTELY NO META-COMMENTARY, CHAIN-OF-THOUGHT, OR PLANNING NOTES: Do NOT write conversational preambles such as "Let's break down the entities:", "Now let's write the schema:", "However note that...", or draft notes. Start IMMEDIATELY with the Mermaid diagram or subsection heading. Every token must be part of the final production Markdown.`;
 
   let contextSnippet = '';
   if (siblingContext && Object.keys(siblingContext).length > 0) {
@@ -109,7 +109,7 @@ Classification:
 - Platform: ${classification.platform}
 - Domain: ${classification.domain}
 - Complexity: ${classification.complexityTier}
-- Core Features: ${classification.keyFeatures.join(', ')}
+- Core Features: ${Array.isArray(classification.keyFeatures) ? classification.keyFeatures.join(', ') : 'Core Workflows, API Sync, User Access'}
 ${contextSnippet}
 
 Generate the **${meta.title}** section for this project.
@@ -118,7 +118,7 @@ Section Objective: ${meta.description}
 Section-Specific Requirements:
 ${getSectionSpecificInstructions(sectionId)}
 
-Provide ONLY the clean Markdown content for this section. Remember: no top-level # title and no *** separator lines.`;
+Provide ONLY the clean Markdown content for this section. Remember: no top-level # title, no *** separator lines, and no conversational preamble.`;
 
   return { prompt, systemPrompt };
 }
@@ -146,9 +146,28 @@ function getSectionSpecificInstructions(sectionId: SpecSectionId): string {
 - Provide an annotated code block (\`\`\`typescript ... \`\`\`) implementing the core backend algorithm (e.g. Token Bucket rate limiter, DAG resolver, CRDT merge, indexing heuristic).`;
 
     case 'dataModel':
-      return `- MUST provide a Mermaid ER diagram (\`\`\`mermaid\nerDiagram\n...\n\`\`\`) modeling core entities and relationships.
-- MUST provide a Schema Table: | Entity | Field | Type | Constraints (PK, FK, Unique, Indexed) | Description |
-- Explicitly annotate indexes for high-frequency query paths.`;
+      return `- MUST start IMMEDIATELY with a comprehensive Mermaid ER diagram (\`\`\`mermaid\nerDiagram\n...\n\`\`\`) modeling all core entities, attributes, and relationships.
+- CRITICAL MERMAID ER DIAGRAM SYNTAX RULES:
+  * Line 1 MUST be \`erDiagram\` (no spaces or extra text).
+  * Relationships MUST use valid Mermaid cardinalities:
+    - \`EntityA ||--o{ EntityB : "has"\` (one-to-many)
+    - \`EntityA ||--|| EntityB : "relates_to"\` (one-to-one)
+    - \`EntityA }o--o{ EntityB : "associates"\` (many-to-many)
+    - ALWAYS wrap relationship labels in double quotes.
+  * Define entity fields inside curly braces:
+    EntityName {
+      uuid id PK
+      uuid foreign_id FK
+      string name
+      datetime created_at
+    }
+  * Attribute types MUST be single alphanumeric words without parentheses or spaces (e.g. \`uuid\`, \`string\`, \`int\`, \`float\`, \`boolean\`, \`datetime\`, \`date\`, \`json\`). NEVER use \`varchar(255)\`, \`timestamp with time zone\`, or spaces/parentheses.
+  * Key constraints (\`PK\`, \`FK\`, \`UK\`) go immediately after the field name.
+  * NEVER put \`#\` or \`//\` comments inside entity blocks. If you must describe a field, enclose the description in double quotes at the end: e.g. \`string role "student, teacher, admin"\`.
+  * Ensure all open curly braces \`{\` have matching closing braces \`}\`.
+- MUST follow the diagram with:
+  1. A structured Schema Table: | Entity | Field | Type | Constraints (PK, FK, Unique, Indexed) | Description |
+  2. High-Frequency Indexing Strategy: Explicitly document compound & B-Tree indexes for fast queries (e.g. multi-tenant isolation, roll_number lookups, user_id, chat_room_id, timestamps).`;
 
     case 'apiEndpoints':
       return `- MUST provide an API Endpoints Table: | Method | Endpoint Path | Summary | Auth Required | Request Payload Summary | Response Status & Body |
@@ -182,18 +201,22 @@ function getSectionSpecificInstructions(sectionId: SpecSectionId): string {
 - Define Input Validation boundaries (Zod validation at HTTP gateway, parameterized SQL queries, rate limiting).`;
 
     case 'costEstimate':
-      return `- MUST provide an Infrastructure Cost Projections Table with columns: | Cost Category | MVP (0-1k MAU) | Growth (10k-50k MAU) | Scale (100k+ MAU) | Cost Optimization Strategy |
+      return `- STRICTLY DO NOT GENERATE FLOWCHARTS OR MERMAID DIAGRAMS. Use Markdown tables and bulleted text only.
+- MUST provide an Infrastructure Cost Projections Table with columns: | Cost Category | MVP (0-1k MAU) | Growth (10k-50k MAU) | Scale (100k+ MAU) | Cost Optimization Strategy |
 - Give realistic monthly dollar estimates for compute, database, caching, storage, and third-party SaaS.`;
 
     case 'integrations':
-      return `- Auto-detect all required third-party services and provide an Integrations Table: | Service Name | Category (Payments/Auth/Maps/Email) | Protocol (REST/Webhook/SDK) | Free Tier vs Paid Quota | Key Endpoints |`;
+      return `- STRICTLY DO NOT GENERATE FLOWCHARTS OR MERMAID DIAGRAMS. Use Markdown tables and bulleted text only.
+- Auto-detect all required third-party services and provide an Integrations Table: | Service Name | Category (Payments/Auth/Maps/Email) | Protocol (REST/Webhook/SDK) | Free Tier vs Paid Quota | Key Endpoints |`;
 
     case 'testingStrategy':
-      return `- MUST provide a Testing Strategy Table: | Testing Layer | Scope & Responsibility | Recommended Framework | Target Coverage | Execution Timing |
+      return `- STRICTLY DO NOT GENERATE FLOWCHARTS OR MERMAID DIAGRAMS. Use Markdown tables and bulleted text only.
+- MUST provide a Testing Strategy Table: | Testing Layer | Scope & Responsibility | Recommended Framework | Target Coverage | Execution Timing |
 - Cover Unit, Integration, and E2E testing with quality gates.`;
 
     case 'riskAssumptions':
-      return `- Provide an Assumptions Log: list of assumptions made regarding the user's concept for review.
+      return `- STRICTLY DO NOT GENERATE FLOWCHARTS OR MERMAID DIAGRAMS. Use Markdown tables and bulleted text only.
+- Provide an Assumptions Log: list of assumptions made regarding the user's concept for review.
 - MUST provide a Technical Risk Matrix Table: | Risk Description | Severity (High/Med/Low) | Likelihood (High/Med/Low) | Mitigation Strategy |`;
   }
 }

@@ -17,12 +17,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PROVIDERS_META = void 0;
 exports.getAdapter = getAdapter;
 const gemini_adapter_1 = require("./gemini.adapter");
+const claude_adapter_1 = require("./claude.adapter");
 const openrouter_adapter_1 = require("./openrouter.adapter");
 const nvidia_adapter_1 = require("./nvidia.adapter");
 const grok_adapter_1 = require("./grok.adapter");
 __exportStar(require("./llm.interface"), exports);
+const claudeInstance = new claude_adapter_1.ClaudeAdapter();
 const adapters = {
     gemini: new gemini_adapter_1.GeminiAdapter(),
+    claude: claudeInstance,
+    anthropic: claudeInstance,
     openrouter: new openrouter_adapter_1.OpenRouterAdapter(),
     grok: new grok_adapter_1.GrokAdapter(),
     nvidia: new nvidia_adapter_1.NvidiaAdapter(),
@@ -50,6 +54,22 @@ exports.PROVIDERS_META = [
         ],
         keyPlaceholder: 'AIzaSy...',
         docsUrl: 'https://aistudio.google.com/app/apikey',
+        requiresKey: true,
+    },
+    {
+        id: 'claude',
+        name: 'Anthropic Claude',
+        description: 'State-of-the-art architectural reasoning, clean system topologies, and pristine code generation directly via Anthropic.',
+        defaultModel: 'claude-3-7-sonnet-20250219',
+        availableModels: [
+            'claude-3-7-sonnet-20250219',
+            'claude-3-5-sonnet-20241022',
+            'claude-3-5-haiku-20241022',
+            'claude-3-opus-20240229',
+            'claude-3-haiku-20240307',
+        ],
+        keyPlaceholder: 'sk-ant-api03-...',
+        docsUrl: 'https://console.anthropic.com/settings/keys',
         requiresKey: true,
     },
     {

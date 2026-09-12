@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles, ArrowRight, Lightbulb, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, ArrowRight, Lightbulb, AlertCircle, AlertTriangle, BookOpen } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 
 const PRESET_IDEAS = [
@@ -23,11 +23,16 @@ const PRESET_IDEAS = [
 
 interface IdeaInputProps {
   onOpenKeyModal: () => void;
+  onOpenInstructions?: () => void;
 }
 
-export const IdeaInput: React.FC<IdeaInputProps> = ({ onOpenKeyModal }) => {
+export const IdeaInput: React.FC<IdeaInputProps> = ({ onOpenKeyModal, onOpenInstructions }) => {
   const { idea, setIdea, runPipeline, isGenerating, generationStage, error, providerConfig } = useSession();
   const [localIdea, setLocalIdea] = useState<string>(idea);
+
+  useEffect(() => {
+    setLocalIdea(idea);
+  }, [idea]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +62,18 @@ export const IdeaInput: React.FC<IdeaInputProps> = ({ onOpenKeyModal }) => {
         <p className="mt-3 text-base text-subtle max-w-xl mx-auto font-normal">
           Provide your software concept. Blueprint.ai autonomously builds your architecture, data model, named algorithms, API contracts, folder tree, and design system.
         </p>
+        {onOpenInstructions && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={onOpenInstructions}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE6] text-charcoal hover:text-terracotta border border-border-warm shadow-nm-sm transition-all"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-terracotta" />
+              <span>Guide & Instructions: Recommended Gemini API, Free OpenRouter, Flowcharts & PDF Export →</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Input Card */}
@@ -66,9 +83,20 @@ export const IdeaInput: React.FC<IdeaInputProps> = ({ onOpenKeyModal }) => {
             <Lightbulb className="w-4 h-4 text-terracotta" />
             Software Concept / Elevator Pitch
           </label>
-          <span className="text-xs font-mono text-subtle">
-            {localIdea.length} characters
-          </span>
+          <div className="flex items-center gap-2.5">
+            {localIdea.length > 0 && !isGenerating && (
+              <button
+                type="button"
+                onClick={() => { setLocalIdea(''); setIdea(''); }}
+                className="text-[11px] text-subtle hover:text-charcoal transition-colors underline"
+              >
+                Clear
+              </button>
+            )}
+            <span className="text-xs font-mono text-subtle">
+              {localIdea.length} characters
+            </span>
+          </div>
         </div>
 
         <div className="relative">
@@ -82,24 +110,47 @@ export const IdeaInput: React.FC<IdeaInputProps> = ({ onOpenKeyModal }) => {
           />
         </div>
 
-        {/* Error Notification */}
-        {error && (
-          <div className="mt-4 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-3 animate-fade-in">
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span className="font-bold">Generation Stopped:</span> {error}
+        {/* Error / Free Tier Limit Notification */}
+        {error && (() => {
+          const isFreeLimit = /free.*(?:limit|tier|trie)|rate\s*limit|quota|credit|429|402|unavailable|failed to fetch|empty_response/i.test(error);
+          return (
+            <div className={`mt-4 p-4 rounded-2xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-sm ${
+              isFreeLimit
+                ? 'bg-amber-50/90 border border-amber-300 text-amber-950'
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}>
+              <div className="flex items-start gap-3 flex-1">
+                {isFreeLimit ? (
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <div className={`font-bold text-xs ${isFreeLimit ? 'text-amber-900' : 'text-red-900'}`}>
+                    {isFreeLimit ? 'Free Tier / Model Limit Reached' : 'Generation Error'}
+                  </div>
+                  <p className={`mt-0.5 leading-relaxed ${isFreeLimit ? 'text-amber-800' : 'text-red-700'}`}>
+                    {error}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={onOpenKeyModal}
+                  className={`px-3.5 py-1.5 rounded-xl font-semibold shadow-sm transition-all flex items-center gap-1.5 ${
+                    isFreeLimit
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-white hover:bg-red-50 text-red-700 border border-red-300'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Change Model / Key</span>
+                </button>
+              </div>
             </div>
-            {!hasKey && (
-              <button
-                type="button"
-                onClick={onOpenKeyModal}
-                className="px-2.5 py-1 bg-white rounded-lg border border-red-300 font-semibold text-red-700 hover:bg-red-50 transition-colors"
-              >
-                Configure Key
-              </button>
-            )}
-          </div>
-        )}
+          );
+        })()}
 
         {/* Action Row */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">

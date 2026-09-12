@@ -32,7 +32,7 @@ ${classification.summary}
 
 - **Core Problem**: ${classification.coreProblem}
 - **Target Audience**: ${classification.targetAudience}
-- **Primary Capabilities**: ${classification.keyFeatures.map((f) => `\`${f}\``).join(', ')}
+- **Primary Capabilities**: ${Array.isArray(classification.keyFeatures) ? classification.keyFeatures.map((f) => `\`${f}\``).join(', ') : '`Core Workflows`, `API Sync`, `User Access`'}
 
 `;
 
@@ -68,7 +68,6 @@ ${selectedTechStack.notes ? `\n**Architectural Notes**: ${selectedTechStack.note
     'apiEndpoints',
     'folderStructure',
     'businessLogic',
-    'techStack',
     'deployment',
     'security',
     'costEstimate',

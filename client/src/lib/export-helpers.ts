@@ -510,47 +510,42 @@ export async function downloadSplitDocPdf(
   accentColor: string,
   slug: string,
 ): Promise<void> {
-  // Open synchronously to bypass popup blockers
-  const win = window.open('about:blank', '_blank');
+  // Open window synchronously to bypass popup blockers
+  const win = window.open('', '_blank');
   if (!win) {
-    alert('Your browser blocked the popup. Please allow popups for this site and try again.');
+    alert('Your browser blocked opening the document tab. Please allow popups for this site and try again.');
     return;
   }
 
-  // Show loading state immediately
+  // Show clean loading state immediately
   try {
     win.document.open();
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preparing ${docTitle}…</title>
-<style>*{box-sizing:border-box}body{background:#F4F1EC;color:#2C2825;font-family:-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}.spinner{width:44px;height:44px;border:4px solid #E2DDD3;border-top-color:${accentColor};border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:22px}@keyframes spin{to{transform:rotate(360deg)}}h2{margin:0 0 8px;font-size:19px}p{margin:0;color:#736B63;font-size:14px}</style>
-</head><body><div class="spinner"></div><h2>Compiling ${docTitle}…</h2><p>Rendering flowcharts and assembling sections…</p></body></html>`);
+<style>*{box-sizing:border-box}body{background:#F4F1EC;color:#2C2825;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}.spinner{width:44px;height:44px;border:4px solid #E2DDD3;border-top-color:${accentColor};border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:22px}@keyframes spin{to{transform:rotate(360deg)}}h2{margin:0 0 8px;font-size:19px;font-weight:700}p{margin:0;color:#736B63;font-size:13px}</style>
+</head><body><div class="spinner"></div><h2>Compiling ${docTitle}…</h2><p>Rendering diagrams and assembling sections…</p></body></html>`);
     win.document.close();
   } catch {}
 
   // Generate the section-filtered HTML with Mermaid SVGs pre-rendered
   const html = await generateSplitDocumentHtml(data, sectionIds, docTitle, accentColor);
 
-  // Inject auto-print script (1.2 s delay for fonts/SVGs to paint)
-  const printScript = `\n<script>(function(){function p(){try{window.focus();window.print();}catch(e){}}if(document.readyState==='complete'){setTimeout(p,1200);}else{window.addEventListener('load',function(){setTimeout(p,1200);});}})();</script>`;
-  const finalHtml = html.replace('</body>', `${printScript}\n</body>`);
-
   try {
     if (win && !win.closed) {
       win.document.open();
-      win.document.write(finalHtml);
+      win.document.write(html);
       win.document.close();
       win.focus();
     }
   } catch (err) {
     console.error('[downloadSplitDocPdf] Window write failed, falling back to file download:', err);
     const safeSlug = (data.idea || 'blueprint').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
-    downloadFile(finalHtml, `${safeSlug}-${slug}.html`, 'text/html;charset=utf-8');
+    downloadFile(html, `${safeSlug}-${slug}.html`, 'text/html;charset=utf-8');
   }
 }
 
 /**
- * Opens the full pipeline document (all sections) in a dedicated new window and
- * automatically triggers the print dialog so the user can "Save as PDF".
- * Mermaid diagrams are pre-rendered to SVG before writing to the window.
+ * Opens the full pipeline document (all sections) in a dedicated print-ready tab.
+ * Includes interactive Print / Save as PDF button in a floating action bar.
  */
 export async function downloadFullPipelinePdf(data: {
   idea: string;
@@ -560,9 +555,9 @@ export async function downloadFullPipelinePdf(data: {
   selectedDesign?: any;
 }): Promise<void> {
   // Open window synchronously on the click event to bypass popup blockers
-  const win = window.open('about:blank', '_blank');
+  const win = window.open('', '_blank');
   if (!win) {
-    alert('Your browser blocked the popup. Please allow popups for this site and try again.');
+    alert('Your browser blocked opening the document tab. Please allow popups for this site and try again.');
     return;
   }
 
@@ -571,12 +566,12 @@ export async function downloadFullPipelinePdf(data: {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Preparing Full PDF…</title>
+  <title>Preparing Blueprint Specification…</title>
   <style>
     * { box-sizing: border-box; }
     body {
       background: #F4F1EC; color: #2C2825;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; min-height: 100vh; margin: 0; padding: 20px;
     }
@@ -587,14 +582,14 @@ export async function downloadFullPipelinePdf(data: {
       margin-bottom: 24px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    h2 { margin: 0 0 8px 0; font-size: 20px; }
+    h2 { margin: 0 0 8px 0; font-size: 20px; font-weight: 700; }
     p { margin: 0; color: #736B63; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="spinner"></div>
   <h2>Compiling Full Architecture Specification…</h2>
-  <p>Rendering all Mermaid flowcharts and assembling all sections — this may take a moment.</p>
+  <p>Rendering all Mermaid flowcharts and assembling all 13 sections — this may take a moment.</p>
 </body>
 </html>`;
 
@@ -605,7 +600,7 @@ export async function downloadFullPipelinePdf(data: {
   } catch {}
 
   // Generate the complete HTML with all Mermaid diagrams pre-rendered as SVG
-  const fullHtml = await generateDocumentHtmlWithAutoPrint(data);
+  const fullHtml = await generateDocumentHtml(data);
 
   try {
     if (win && !win.closed) {
@@ -620,40 +615,6 @@ export async function downloadFullPipelinePdf(data: {
     const safeSlug = (data.idea || 'blueprint').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 35);
     downloadFile(fullHtml, `${safeSlug}-full-specification.html`, 'text/html;charset=utf-8');
   }
-}
-
-/**
- * Like generateDocumentHtml but injects an auto-print script so the browser
- * print dialog opens automatically when the page finishes loading.
- */
-async function generateDocumentHtmlWithAutoPrint(data: {
-  idea: string;
-  classification: any;
-  specDoc: any;
-  selectedTechStack?: any;
-  selectedDesign?: any;
-}): Promise<string> {
-  const html = await generateDocumentHtml(data);
-  // Inject auto-print before </body>: waits 1.2 s for fonts/SVGs to paint
-  const printScript = `
-<script>
-  (function() {
-    function triggerPrint() {
-      try {
-        window.focus();
-        window.print();
-      } catch(e) {
-        console.warn('Auto-print blocked, user can use the button above.', e);
-      }
-    }
-    if (document.readyState === 'complete') {
-      setTimeout(triggerPrint, 1200);
-    } else {
-      window.addEventListener('load', function() { setTimeout(triggerPrint, 1200); });
-    }
-  })();
-</script>`;
-  return html.replace('</body>', `${printScript}\n</body>`);
 }
 
 /**

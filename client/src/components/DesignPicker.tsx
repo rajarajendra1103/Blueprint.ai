@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Palette,
   Check,
@@ -20,8 +20,11 @@ export const DesignPicker: React.FC = () => {
     designDirections,
     selectedDesignDirectionId,
     setSelectedDesignDirectionId,
+    updateDesignDirection,
     setActiveStep,
   } = useSession();
+
+  const [customizing, setCustomizing] = useState<boolean>(false);
 
   if (!designDirections || designDirections.length < 2) {
     return (
@@ -34,6 +37,43 @@ export const DesignPicker: React.FC = () => {
   }
 
   const [dir1, dir2] = designDirections;
+  const activeDirection = selectedDesignDirectionId === 'direction-1' ? dir1 : dir2;
+
+  const handleColorChange = (key: 'primary' | 'accent' | 'surface' | 'base', hex: string) => {
+    updateDesignDirection(selectedDesignDirectionId, {
+      colors: {
+        ...activeDirection.colors,
+        [key]: hex,
+      },
+    });
+  };
+
+  const handleTypographyChange = (key: 'headingFont' | 'bodyFont', font: string) => {
+    updateDesignDirection(selectedDesignDirectionId, {
+      typography: {
+        ...activeDirection.typography,
+        [key]: font,
+      },
+    });
+  };
+
+  const handleLayoutChange = (key: 'density' | 'style', val: string) => {
+    updateDesignDirection(selectedDesignDirectionId, {
+      layout: {
+        ...activeDirection.layout,
+        [key]: val,
+      },
+    });
+  };
+
+  const handleCornerRadiusChange = (radius: string) => {
+    updateDesignDirection(selectedDesignDirectionId, {
+      style: {
+        ...activeDirection.style,
+        cornerRadius: radius,
+      },
+    });
+  };
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 space-y-8 animate-fade-in">
@@ -66,6 +106,167 @@ export const DesignPicker: React.FC = () => {
           isSelected={selectedDesignDirectionId === 'direction-2'}
           onSelect={() => setSelectedDesignDirectionId('direction-2')}
         />
+      </div>
+
+      {/* Customize Design System Overrides (Same as CP1 Tech Stack Overrides) */}
+      <div className="card-nm p-6 rounded-3xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="font-bold text-sm text-charcoal flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-terracotta" />
+              <span>Custom Design System Overrides</span>
+            </h4>
+            <p className="text-xs text-subtle mt-0.5">
+              Fine-tune primary brand palette, typography, layout density, and corner styling for{' '}
+              <strong className="text-terracotta">{activeDirection.name}</strong>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCustomizing(!customizing)}
+            className="px-4 py-2 rounded-xl text-xs font-semibold btn-nm text-charcoal shrink-0"
+          >
+            {customizing ? 'Lock Design Tokens' : 'Customize Design Tokens'}
+          </button>
+        </div>
+
+        {customizing && (
+          <div className="mt-5 space-y-5 pt-5 border-t border-border-warm animate-fade-in">
+            {/* Color Palette Row */}
+            <div>
+              <span className="block text-xs font-semibold text-charcoal mb-2">Curated Color Tokens</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Primary Color */}
+                <div className="p-3 bg-[#EFECE6] rounded-2xl border border-border-warm flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={activeDirection.colors.primary}
+                    onChange={(e) => handleColorChange('primary', e.target.value)}
+                    className="w-9 h-9 rounded-xl border-0 cursor-pointer p-0 bg-transparent"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-[11px] font-bold text-charcoal">Primary Brand</label>
+                    <input
+                      type="text"
+                      value={activeDirection.colors.primary}
+                      onChange={(e) => handleColorChange('primary', e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono text-charcoal outline-none border-b border-border-warm focus:border-terracotta"
+                    />
+                  </div>
+                </div>
+
+                {/* Accent Color */}
+                <div className="p-3 bg-[#EFECE6] rounded-2xl border border-border-warm flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={activeDirection.colors.accent}
+                    onChange={(e) => handleColorChange('accent', e.target.value)}
+                    className="w-9 h-9 rounded-xl border-0 cursor-pointer p-0 bg-transparent"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-[11px] font-bold text-charcoal">Accent Color</label>
+                    <input
+                      type="text"
+                      value={activeDirection.colors.accent}
+                      onChange={(e) => handleColorChange('accent', e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono text-charcoal outline-none border-b border-border-warm focus:border-terracotta"
+                    />
+                  </div>
+                </div>
+
+                {/* Surface Color */}
+                <div className="p-3 bg-[#EFECE6] rounded-2xl border border-border-warm flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={activeDirection.colors.surface}
+                    onChange={(e) => handleColorChange('surface', e.target.value)}
+                    className="w-9 h-9 rounded-xl border-0 cursor-pointer p-0 bg-transparent"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-[11px] font-bold text-charcoal">Card Surface</label>
+                    <input
+                      type="text"
+                      value={activeDirection.colors.surface}
+                      onChange={(e) => handleColorChange('surface', e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono text-charcoal outline-none border-b border-border-warm focus:border-terracotta"
+                    />
+                  </div>
+                </div>
+
+                {/* Base Background */}
+                <div className="p-3 bg-[#EFECE6] rounded-2xl border border-border-warm flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={activeDirection.colors.base}
+                    onChange={(e) => handleColorChange('base', e.target.value)}
+                    className="w-9 h-9 rounded-xl border-0 cursor-pointer p-0 bg-transparent"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-[11px] font-bold text-charcoal">Base Background</label>
+                    <input
+                      type="text"
+                      value={activeDirection.colors.base}
+                      onChange={(e) => handleColorChange('base', e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono text-charcoal outline-none border-b border-border-warm focus:border-terracotta"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Typography & Layout Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-charcoal mb-1">Heading Font</label>
+                <input
+                  type="text"
+                  value={activeDirection.typography.headingFont}
+                  onChange={(e) => handleTypographyChange('headingFont', e.target.value)}
+                  className="w-full bg-[#EFECE6] border border-border-warm rounded-xl px-3 py-2 text-xs text-charcoal shadow-nm-inset-sm focus:ring-2 focus:ring-terracotta outline-none"
+                  placeholder="e.g. Newsreader, Inter, Playfair"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-charcoal mb-1">Body Font</label>
+                <input
+                  type="text"
+                  value={activeDirection.typography.bodyFont}
+                  onChange={(e) => handleTypographyChange('bodyFont', e.target.value)}
+                  className="w-full bg-[#EFECE6] border border-border-warm rounded-xl px-3 py-2 text-xs text-charcoal shadow-nm-inset-sm focus:ring-2 focus:ring-terracotta outline-none"
+                  placeholder="e.g. Plus Jakarta Sans, Roboto"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-charcoal mb-1">Layout Density</label>
+                <select
+                  value={activeDirection.layout.density}
+                  onChange={(e) => handleLayoutChange('density', e.target.value)}
+                  className="w-full bg-[#EFECE6] border border-border-warm rounded-xl px-3 py-2 text-xs text-charcoal shadow-nm-inset-sm focus:ring-2 focus:ring-terracotta outline-none"
+                >
+                  <option value="Compact / High-Information">Compact / High-Information</option>
+                  <option value="Balanced / Modern Dashboard">Balanced / Modern Dashboard</option>
+                  <option value="Spacious / Editorial Canvas">Spacious / Editorial Canvas</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-charcoal mb-1">Corner Radius</label>
+                <select
+                  value={activeDirection.style.cornerRadius}
+                  onChange={(e) => handleCornerRadiusChange(e.target.value)}
+                  className="w-full bg-[#EFECE6] border border-border-warm rounded-xl px-3 py-2 text-xs text-charcoal shadow-nm-inset-sm focus:ring-2 focus:ring-terracotta outline-none"
+                >
+                  <option value="rounded-3xl (24px)">Pill / Smooth (rounded-3xl)</option>
+                  <option value="rounded-2xl (16px)">Modern Soft (rounded-2xl)</option>
+                  <option value="rounded-xl (12px)">Subtle (rounded-xl)</option>
+                  <option value="rounded-none (0px)">Sharp / Brutalist (0px)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer Navigation */}

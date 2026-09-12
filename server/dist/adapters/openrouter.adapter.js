@@ -28,6 +28,7 @@ class OpenRouterAdapter {
                 'X-Title': 'Blueprint.ai',
             },
             body: JSON.stringify(body),
+            signal: AbortSignal.timeout(25000),
         });
         if (!response.ok) {
             const errText = await response.text();
@@ -45,10 +46,12 @@ class OpenRouterAdapter {
             throw error;
         }
         const data = (await response.json());
-        const content = data.choices?.[0]?.message?.content;
+        let content = data.choices?.[0]?.message?.content;
         if (!content) {
             throw new Error('OpenRouter returned empty response');
         }
+        // Strip guardrail/safety filter preambles (e.g., Nemotron "User Safety: safe")
+        content = content.replace(/^(?:User\s+Safety|Safety|Content\s+Filter|Moderation):\s*(?:safe|unsafe|passed|pass|ok)\s*\n*/i, '').trim();
         return content;
     }
     async generate(prompt, apiKey, model = 'openrouter/free', options) {
@@ -57,22 +60,36 @@ class OpenRouterAdapter {
         const isFreeModel = model.includes(':free') || model === 'openrouter/free';
         const fallbackFreeModels = [
             'openrouter/free',
-            'google/gemma-4-31b-it:free',
-            'nvidia/nemotron-3-super-120b-a12b:free',
-            'nvidia/nemotron-3.5-lightning:free',
-            'minimax/minimax-m3:free',
-            'cohere/north-mini-code:free',
-            'google/gemma-4-26b-a4b-it:free',
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'qwen/qwen-2.5-coder-32b-instruct:free',
+            'google/gemma-3-27b-it:free',
         ].filter((m) => m !== model);
+        const isExhaustedOrRateLimited = (e) => {
+            const msg = (e.message || '').toLowerCase();
+            const st = e.status;
+            return (st === 429 ||
+                st === 402 ||
+                st === 404 ||
+                st === 503 ||
+                msg.includes('rate limit') ||
+                msg.includes('too many requests') ||
+                msg.includes('quota') ||
+                msg.includes('credit') ||
+                msg.includes('free tier') ||
+                msg.includes('unavailable for free') ||
+                msg.includes('limit reached') ||
+                msg.includes('empty response') ||
+                msg.includes('timeout'));
+        };
         try {
             return await this.executeRequest(model, apiKey, prompt, options);
         }
         catch (err) {
-            // If a free model returned 404 (unavailable for free) or transient 503/429
-            if (isFreeModel && (err.status === 404 || err.message?.includes('unavailable for free'))) {
-                for (const fallback of fallbackFreeModels) {
+            if (isFreeModel && isExhaustedOrRateLimited(err)) {
+                console.warn(`[OpenRouter] '${model}' hit rate limit or is unavailable (${err.message}). Attempting free fallbacks...`);
+                for (const fallback of fallbackFreeModels.slice(0, 2)) {
                     try {
-                        console.warn(`[OpenRouter] '${model}' is unavailable for free. Automatically falling back to: ${fallback}`);
+                        console.warn(`[OpenRouter] Trying fallback free model: ${fallback}`);
                         return await this.executeRequest(fallback, apiKey, prompt, options);
                     }
                     catch (fallbackErr) {
@@ -80,6 +97,10 @@ class OpenRouterAdapter {
                         continue;
                     }
                 }
+                const friendlyError = new Error(`Free tier limit reached for model '${model}' on OpenRouter. The free requests / rate limits for this model have been exceeded. Please click "Change Model" in Provider Settings to select another free model or switch to Google Gemini.`);
+                friendlyError.status = 429;
+                friendlyError.isFreeTierExhausted = true;
+                throw friendlyError;
             }
             throw err;
         }

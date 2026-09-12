@@ -36,13 +36,18 @@ interface SessionContextType {
   setActiveStep: (step: number) => void;
   isGenerating: boolean;
   generationStage: string;
+  generatingSectionIds: Record<string, boolean>;
+  isBatchGenerating: boolean;
   error: string | null;
   setError: (err: string | null) => void;
 
   // Primary Actions
   runPipeline: (customIdea?: string) => Promise<void>;
+  generateSingleSection: (sectionId: SpecSectionId, customInstructions?: string) => Promise<void>;
+  generateAllRemainingSections: () => Promise<void>;
   regenerateSection: (sectionId: SpecSectionId, customInstructions?: string) => Promise<void>;
   updateSectionContent: (sectionId: SpecSectionId, newContent: string) => void;
+  updateDesignDirection: (id: 'direction-1' | 'direction-2', updates: Partial<DesignDirection>) => void;
   proceedToDesign: () => Promise<void>;
   resetAll: () => void;
 }
@@ -60,6 +65,8 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [activeStep, setActiveStep] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationStage, setGenerationStage] = useState<string>('');
+  const [generatingSectionIds, setGeneratingSectionIds] = useState<Record<string, boolean>>({});
+  const [isBatchGenerating, setIsBatchGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Hydrate project state from sessionStorage or shareable link on mount
@@ -122,8 +129,8 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const runPipeline = async (customIdea?: string) => {
-    const targetIdea = customIdea || idea;
-    if (!targetIdea || targetIdea.trim().length < 5) {
+    const targetIdea = (customIdea || idea).trim();
+    if (!targetIdea || targetIdea.length < 5) {
       setError('Please provide a descriptive software idea (at least 5 characters).');
       return;
     }
@@ -132,6 +139,16 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
       setError(`Please configure your ${providerConfig.provider.toUpperCase()} API key in the provider settings before starting.`);
       return;
     }
+
+    // Completely clear prior project state so it never leaks into the new project!
+    setIdeaState(targetIdea);
+    setClassification(null);
+    setSpecDoc(null);
+    setSelectedTechStack(null);
+    setDesignDirections(null);
+    setSelectedDesignDirectionId('direction-1');
+    setGeneratingSectionIds({});
+    setIsBatchGenerating(false);
 
     setError(null);
     setIsGenerating(true);
@@ -146,29 +163,29 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
         setSelectedTechStack(classResult.suggestedTechStacks.recommended);
       }
 
-      // 2. Full Spec Generation
-      setGenerationStage('Stage 2: Synthesizing complete 12-section technical specification...');
-      const fullSpec = await api.generateFullSpec(targetIdea, classResult, providerConfig);
+      // 2. Foundation Spec Generation (Hybrid Model: Fast 3 Core Pillars)
+      setGenerationStage('Stage 2: Synthesizing core foundation architecture, requirements & data model...');
+      const fullSpec = await api.generateFullSpec(targetIdea, classResult, providerConfig, true);
       setSpecDoc(fullSpec);
 
-      // Checkpoint 1 reached
+      // Successfully generated: stay on Step 1 (Spec Pipeline) to explore the 13 slides!
       setGenerationStage('');
-      setActiveStep(2);
+      setActiveStep(1);
     } catch (err: any) {
       console.error('Pipeline error:', err);
       setError(err.message || 'An unexpected error occurred during generation.');
+      setActiveStep(0);
     } finally {
       setIsGenerating(false);
       setGenerationStage('');
     }
   };
 
-  const regenerateSection = async (sectionId: SpecSectionId, customInstructions?: string) => {
+  const generateSingleSection = async (sectionId: SpecSectionId, customInstructions?: string) => {
     if (!classification || !specDoc) return;
 
     setError(null);
-    setIsGenerating(true);
-    setGenerationStage(`Regenerating ${specDoc.sections[sectionId]?.title || sectionId}...`);
+    setGeneratingSectionIds((prev) => ({ ...prev, [sectionId]: true }));
 
     try {
       const result = await api.regenerateSection({
@@ -186,18 +203,49 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
           ...prev,
           sections: {
             ...prev.sections,
-            [sectionId]: result.section,
+            [sectionId]: {
+              ...result.section,
+              isCustomGenerated: true,
+              isApproved: true,
+            },
           },
           warnings: result.warnings,
         };
       });
     } catch (err: any) {
-      console.error('Section regeneration error:', err);
-      setError(err.message || 'Failed to regenerate section.');
+      console.error(`Section generation error for ${sectionId}:`, err);
+      setError(err.message || `Failed to generate ${sectionId}`);
     } finally {
-      setIsGenerating(false);
+      setGeneratingSectionIds((prev) => {
+        const next = { ...prev };
+        delete next[sectionId];
+        return next;
+      });
+    }
+  };
+
+  const generateAllRemainingSections = async () => {
+    if (!classification || !specDoc || isBatchGenerating) return;
+    setIsBatchGenerating(true);
+    setError(null);
+
+    const pendingIds = (Object.keys(specDoc.sections) as SpecSectionId[]).filter(
+      (id) => !specDoc.sections[id]?.isCustomGenerated
+    );
+
+    try {
+      for (const secId of pendingIds) {
+        setGenerationStage(`Synthesizing ${specDoc.sections[secId]?.title || secId}...`);
+        await generateSingleSection(secId);
+      }
+    } finally {
+      setIsBatchGenerating(false);
       setGenerationStage('');
     }
+  };
+
+  const regenerateSection = async (sectionId: SpecSectionId, customInstructions?: string) => {
+    await generateSingleSection(sectionId, customInstructions);
   };
 
   const updateSectionContent = (sectionId: SpecSectionId, newContent: string) => {
@@ -218,6 +266,18 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
           },
         },
       };
+    });
+  };
+
+  const updateDesignDirection = (id: 'direction-1' | 'direction-2', updates: Partial<DesignDirection>) => {
+    setDesignDirections((prev) => {
+      if (!prev) return prev;
+      const [d1, d2] = prev;
+      if (id === 'direction-1') {
+        return [{ ...d1, ...updates }, d2];
+      } else {
+        return [d1, { ...d2, ...updates }];
+      }
     });
   };
 
@@ -275,11 +335,16 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
         setActiveStep,
         isGenerating,
         generationStage,
+        generatingSectionIds,
+        isBatchGenerating,
         error,
         setError,
         runPipeline,
+        generateSingleSection,
+        generateAllRemainingSections,
         regenerateSection,
         updateSectionContent,
+        updateDesignDirection,
         proceedToDesign,
         resetAll,
       }}

@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Trash2,
   Sparkles,
+  BookOpen,
 } from 'lucide-react';
 import { LLMProviderId, ProviderMeta, UserProviderConfig } from '@blueprint/shared';
 import { useSession } from '../context/SessionContext';
@@ -18,9 +19,10 @@ import * as api from '../lib/api';
 interface ProviderKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenInstructions?: () => void;
 }
 
-export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onClose }) => {
+export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onClose, onOpenInstructions }) => {
   const { providerConfig, updateProviderConfig, clearApiKey } = useSession();
 
   const [providers, setProviders] = useState<ProviderMeta[]>([]);
@@ -110,9 +112,9 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#F4F1EC] border border-border-warm rounded-3xl shadow-nm-lg max-w-xl w-full p-6 sm:p-8 relative overflow-hidden">
+      <div className="bg-[#F4F1EC] border border-border-warm rounded-3xl shadow-nm-lg max-w-xl w-full flex flex-col max-h-[90vh] relative overflow-hidden">
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-5 border-b border-border-warm">
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-border-warm shrink-0 bg-[#EFECE6]/60">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#EFECE6] border border-border-warm flex items-center justify-center text-terracotta shadow-nm-inset-sm">
               <Key className="w-5 h-5" />
@@ -135,8 +137,8 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
           </button>
         </div>
 
-        {/* Provider Selection */}
-        <div className="mt-6 space-y-5">
+        {/* Scrollable Modal Body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-charcoal uppercase tracking-wider mb-2">
               Select Provider
@@ -156,7 +158,9 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
                     }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
-                      <span className="font-semibold text-charcoal">{p.name.split(' ')[0]}</span>
+                      <span className="font-semibold text-charcoal">
+                        {p.id === 'claude' || p.id === 'anthropic' ? 'Claude' : p.name.split(' ')[0]}
+                      </span>
                     </div>
                     <span className="text-[11px] line-clamp-1 opacity-80">{p.name}</span>
                   </button>
@@ -181,7 +185,7 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
                   <>
                     <optgroup label="Free Models (:free — $0 Balance Required)">
                       {currentMeta.availableModels
-                        .filter((m) => m.includes(':free'))
+                        .filter((m) => m.includes(':free') || m === 'openrouter/free')
                         .map((m) => (
                           <option key={m} value={m}>
                             ✨ {m} (100% Free)
@@ -190,7 +194,7 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
                     </optgroup>
                     <optgroup label="Flagship & Premium Models (Requires Credits)">
                       {currentMeta.availableModels
-                        .filter((m) => !m.includes(':free'))
+                        .filter((m) => !m.includes(':free') && m !== 'openrouter/free')
                         .map((m) => (
                           <option key={m} value={m}>
                             💎 {m}
@@ -218,6 +222,15 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
                   className="sm:w-72 bg-[#EFECE6] border border-border-warm rounded-lg px-2.5 py-1 text-[11px] font-mono text-charcoal outline-none focus:ring-1 focus:ring-terracotta"
                 />
               </div>
+
+              {selectedProvider === 'openrouter' && (
+                <div className="mt-2.5 p-2.5 bg-amber-50/80 border border-amber-200/80 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Rate limit tip:</strong> If your selected free model reaches its free requests limit on OpenRouter, simply select any other <code>:free</code> model from the dropdown above or switch to Google Gemini!
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -315,18 +328,37 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
               <strong>Stateless BYOK:</strong> Keys live strictly in your browser&apos;s sessionStorage and are forwarded solely to provider endpoints per request.
             </span>
           </div>
+
+          {/* Guide Shortcut */}
+          {onOpenInstructions && (
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="text-subtle">Need help picking a provider?</span>
+              <button
+                type="button"
+                onClick={() => { onClose(); onOpenInstructions(); }}
+                className="text-terracotta hover:underline font-semibold flex items-center gap-1"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>View Setup Guide & Recommendations →</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Modal Actions */}
-        <div className="mt-7 pt-4 border-t border-border-warm flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleTestConnection}
-            disabled={isTesting || !apiKey}
-            className="px-4 py-2.5 rounded-xl text-xs font-semibold btn-nm text-charcoal disabled:opacity-50 flex items-center gap-2"
-          >
-            {isTesting ? 'Pinging Provider...' : 'Test Connection'}
-          </button>
+        {/* Sticky Modal Actions at bottom */}
+        <div className="p-4 px-6 border-t border-border-warm bg-[#EFECE6]/80 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={isTesting || !apiKey}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold btn-nm text-charcoal disabled:opacity-50 flex items-center gap-2"
+              title="Step 1: Test connection before saving"
+            >
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+              <span>{isTesting ? 'Pinging Provider...' : 'Test Connection'}</span>
+            </button>
+          </div>
 
           <div className="flex items-center gap-2.5">
             <button
@@ -339,9 +371,11 @@ export const ProviderKeyModal: React.FC<ProviderKeyModalProps> = ({ isOpen, onCl
             <button
               type="button"
               onClick={handleSave}
-              className="px-5 py-2.5 rounded-xl text-xs font-semibold btn-terracotta text-white"
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold btn-terracotta text-white flex items-center gap-2 shadow-sm"
+              title="Step 2: Save configuration after testing"
             >
-              Save Configuration
+              <span className="w-4 h-4 rounded-full bg-white/30 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+              <span>Save Configuration</span>
             </button>
           </div>
         </div>

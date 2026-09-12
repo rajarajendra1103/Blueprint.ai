@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { marked } from 'marked';
-import { GitFork, Copy, Check, Code, Eye, X, Maximize2, ZoomIn, ZoomOut, RotateCcw, RotateCw } from 'lucide-react';
+import { GitFork, Copy, Check, Code, Eye, X, Maximize2, ZoomIn, ZoomOut, RotateCcw, RotateCw, Download } from 'lucide-react';
 
-import { renderMermaidSvg } from '../lib/mermaid-utils';
+import { renderMermaidSvg, cleanSvgXml } from '../lib/mermaid-utils';
 
 interface MarkdownRendererProps {
   content: string;
@@ -32,6 +32,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
   // 3. Remove raw horizontal rule clutter like *** or standalone ---
   cleaned = cleaned.replace(/\n\s*(\*{3,}|-{3,})\s*\n/g, '\n\n');
+
+  // 4. Auto-close truncated mermaid code blocks if output cut off mid-stream
+  const mermaidFences = (cleaned.match(/```(?:mermaid)\b/gi) || []).length;
+  const totalFences = (cleaned.match(/```/g) || []).length;
+  if (mermaidFences > 0 && totalFences % 2 !== 0) {
+    cleaned += '\n```';
+  }
 
   // Split content by ```mermaid code blocks
   const segments: Segment[] = [];
@@ -80,6 +87,8 @@ const MermaidBlock: React.FC<{ chart: string; index: number }> = ({ chart, index
   const [isZoomed, setIsZoomed] = useState<boolean>(false);
   const [zoomScale, setZoomScale] = useState<number>(1.0);
   const [rotation, setRotation] = useState<number>(0);
+  const [isDownloadingPng, setIsDownloadingPng] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const stableIdRef = useRef<string>(`chart-${index}-${Math.random().toString(36).substring(2, 7)}`);
 
   useEffect(() => {
@@ -132,6 +141,143 @@ const MermaidBlock: React.FC<{ chart: string; index: number }> = ({ chart, index
     setRotation(r => (r + 90) % 360);
   };
 
+  const handleDownloadSvg = () => {
+    if (!svg) return;
+    // Strictly sanitize XML to prevent "Attribute style redefined" in Chromium
+    const cleanXml = cleanSvgXml(svg);
+    const blob = new Blob([cleanXml], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `flowchart-${index + 1}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleDownloadPng = async () => {
+    if (!svg || isDownloadingPng) return;
+    setIsDownloadingPng(true);
+
+    try {
+      // 1. Sanitize XML to avoid duplicate attributes
+      let cleanXml = cleanSvgXml(svg);
+
+      // 2. Determine native dimensions from viewBox or live DOM node
+      let w = 1200;
+      let h = 800;
+
+      const liveSvg = containerRef.current?.querySelector('svg');
+      if (liveSvg) {
+        const bbox = liveSvg.getBoundingClientRect();
+        if (bbox.width > 50 && bbox.height > 50) {
+          w = Math.round(bbox.width);
+          h = Math.round(bbox.height);
+        }
+      }
+
+      const vbMatch = cleanXml.match(/viewBox=["']([^"']+)["']/i);
+      if (vbMatch) {
+        const parts = vbMatch[1].trim().split(/[\s,]+/).map(Number);
+        if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+          w = Math.round(parts[2]);
+          h = Math.round(parts[3]);
+        }
+      }
+
+      // 3. For rasterization, set explicit width and height on root <svg>
+      cleanXml = cleanXml.replace(/<svg([^>]*)>/i, (_m, attrs) => {
+        const cleanedAttrs = attrs
+          .replace(/\s*\bwidth=["'][^"']*["']/gi, '')
+          .replace(/\s*\bheight=["'][^"']*["']/gi, '')
+          .replace(/\s*\bstyle=["'][^"']*["']/gi, '');
+        return `<svg${cleanedAttrs} width="${w}" height="${h}" style="background:#FFFFFF;">`;
+      });
+
+      // 4. Use data URI (never taints canvas or violates object URL CORS)
+      const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanXml)}`;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      const renderCanvas = () => {
+        const scale = 2; // high-dpi crispness
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setIsDownloadingPng(false);
+          return;
+        }
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        try {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `flowchart-${index + 1}.png`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } else {
+              const dataUrl = canvas.toDataURL('image/png');
+              const a = document.createElement('a');
+              a.href = dataUrl;
+              a.download = `flowchart-${index + 1}.png`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+            setIsDownloadingPng(false);
+          }, 'image/png');
+        } catch (e) {
+          console.error('Canvas export error:', e);
+          const dataUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `flowchart-${index + 1}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setIsDownloadingPng(false);
+        }
+      };
+
+      img.onload = renderCanvas;
+      img.onerror = (err) => {
+        console.warn('Data URI image failed, attempting Blob URL fallback:', err);
+        const svgBlob = new Blob([cleanXml], { type: 'image/svg+xml;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(svgBlob);
+        const fallbackImg = new Image();
+        fallbackImg.onload = () => {
+          renderCanvas();
+          URL.revokeObjectURL(blobUrl);
+        };
+        fallbackImg.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          setIsDownloadingPng(false);
+          handleDownloadSvg();
+        };
+        fallbackImg.src = blobUrl;
+      };
+
+      img.src = dataUri;
+    } catch (err) {
+      console.error('Failed to export PNG:', err);
+      setIsDownloadingPng(false);
+      handleDownloadSvg();
+    }
+  };
+
   return (
     <>
       <div className="my-6 rounded-2xl border border-border-warm bg-white/80 shadow-nm-sm overflow-hidden transition-all">
@@ -147,6 +293,32 @@ const MermaidBlock: React.FC<{ chart: string; index: number }> = ({ chart, index
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Download SVG & PNG Buttons */}
+            {svg && !showCode && (
+              <div className="flex items-center gap-0.5 bg-[#E8E4DC] border border-border-warm rounded-lg p-0.5">
+                <button
+                  type="button"
+                  onClick={handleDownloadSvg}
+                  className="px-2 py-1 rounded text-[11px] font-mono font-medium text-charcoal hover:bg-white/90 hover:text-terracotta transition-colors flex items-center gap-1"
+                  title="Download vector SVG"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>SVG</span>
+                </button>
+                <div className="w-px h-3 bg-border-warm" />
+                <button
+                  type="button"
+                  onClick={handleDownloadPng}
+                  disabled={isDownloadingPng}
+                  className="px-2 py-1 rounded text-[11px] font-mono font-medium text-charcoal hover:bg-white/90 hover:text-terracotta transition-colors flex items-center gap-1 disabled:opacity-50"
+                  title="Download PNG image"
+                >
+                  <Download className={`w-3 h-3 ${isDownloadingPng ? 'animate-bounce text-terracotta' : ''}`} />
+                  <span>{isDownloadingPng ? 'PNG...' : 'PNG'}</span>
+                </button>
+              </div>
+            )}
+
             {/* Rotate Button */}
             {svg && !showCode && (
               <button
@@ -223,6 +395,7 @@ const MermaidBlock: React.FC<{ chart: string; index: number }> = ({ chart, index
             </div>
           ) : (
             <div
+              ref={containerRef}
               className="w-full flex justify-center transition-transform duration-200"
               style={{
                 transform: rotation ? `rotate(${rotation}deg)` : undefined,
@@ -298,6 +471,30 @@ const MermaidBlock: React.FC<{ chart: string; index: number }> = ({ chart, index
                   title="Reset Zoom & Rotation (0)"
                 >
                   <RotateCcw className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Download SVG & PNG in Fullscreen Modal */}
+              <div className="flex items-center gap-0.5 bg-[#E8E4DC] border border-border-warm rounded-xl p-0.5 shadow-nm-inset-sm">
+                <button
+                  type="button"
+                  onClick={handleDownloadSvg}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium text-charcoal hover:bg-white hover:text-terracotta transition-colors flex items-center gap-1"
+                  title="Download vector SVG"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>SVG</span>
+                </button>
+                <div className="w-px h-3 bg-border-warm" />
+                <button
+                  type="button"
+                  onClick={handleDownloadPng}
+                  disabled={isDownloadingPng}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium text-charcoal hover:bg-white hover:text-terracotta transition-colors flex items-center gap-1 disabled:opacity-50"
+                  title="Download high-res PNG"
+                >
+                  <Download className={`w-3 h-3 ${isDownloadingPng ? 'animate-bounce text-terracotta' : ''}`} />
+                  <span>{isDownloadingPng ? 'PNG...' : 'PNG'}</span>
                 </button>
               </div>
 

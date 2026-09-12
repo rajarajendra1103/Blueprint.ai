@@ -1,12 +1,13 @@
 import React from 'react';
-import { Layers, Key, ShieldCheck, Trash2, RefreshCw } from 'lucide-react';
+import { Layers, Key, ShieldCheck, Trash2, RefreshCw, BookOpen } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 
 interface HeaderProps {
   onOpenKeyModal: () => void;
+  onOpenInstructions?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenKeyModal }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenKeyModal, onOpenInstructions }) => {
   const { providerConfig, clearApiKey, resetAll, activeStep } = useSession();
 
   const hasKey = Boolean(providerConfig.apiKey);
@@ -14,6 +15,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenKeyModal }) => {
   const getProviderLabel = () => {
     switch (providerConfig.provider) {
       case 'gemini': return 'Google Gemini';
+      case 'claude':
+      case 'anthropic': return 'Anthropic Claude';
       case 'openrouter': return 'OpenRouter';
       case 'grok': return 'xAI Grok';
       case 'nvidia': return 'NVIDIA NIM';
@@ -46,6 +49,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenKeyModal }) => {
 
         {/* Action Controls & Provider Status */}
         <div className="flex items-center gap-2.5">
+          {/* Instructions Guide Button */}
+          {onOpenInstructions && (
+            <button
+              type="button"
+              onClick={onOpenInstructions}
+              title="BYOK & Usage Guide (Recommended Gemini API, Free OpenRouter, Flowcharts & PDF Export)"
+              className="px-3 py-1.5 rounded-2xl text-xs font-semibold text-charcoal bg-[#EFECE6] hover:bg-white border border-border-warm shadow-nm-sm transition-all flex items-center gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-terracotta" />
+              <span className="hidden sm:inline">Guide & Instructions</span>
+            </button>
+          )}
+
           {/* Provider Status Pill */}
           <div className="flex items-center gap-2 bg-[#EFECE6] border border-border-warm rounded-2xl p-1.5 pl-3 shadow-nm-inset-sm">
             <div className="flex items-center gap-2 text-xs font-medium text-charcoal">

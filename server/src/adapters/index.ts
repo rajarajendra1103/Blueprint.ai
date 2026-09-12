@@ -1,13 +1,18 @@
 import { LLMProviderId, ProviderMeta } from '@blueprint/shared';
 import { LLMProvider } from './llm.interface';
 import { GeminiAdapter } from './gemini.adapter';
+import { ClaudeAdapter } from './claude.adapter';
 import { OpenRouterAdapter } from './openrouter.adapter';
 import { NvidiaAdapter } from './nvidia.adapter';
 import { GrokAdapter } from './grok.adapter';
 export * from './llm.interface';
 
+const claudeInstance = new ClaudeAdapter();
+
 const adapters: Record<LLMProviderId, LLMProvider> = {
   gemini: new GeminiAdapter(),
+  claude: claudeInstance,
+  anthropic: claudeInstance,
   openrouter: new OpenRouterAdapter(),
   grok: new GrokAdapter(),
   nvidia: new NvidiaAdapter(),
@@ -37,6 +42,22 @@ export const PROVIDERS_META: ProviderMeta[] = [
     ],
     keyPlaceholder: 'AIzaSy...',
     docsUrl: 'https://aistudio.google.com/app/apikey',
+    requiresKey: true,
+  },
+  {
+    id: 'claude',
+    name: 'Anthropic Claude',
+    description: 'State-of-the-art architectural reasoning, clean system topologies, and pristine code generation directly via Anthropic.',
+    defaultModel: 'claude-3-7-sonnet-20250219',
+    availableModels: [
+      'claude-3-7-sonnet-20250219',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+      'claude-3-haiku-20240307',
+    ],
+    keyPlaceholder: 'sk-ant-api03-...',
+    docsUrl: 'https://console.anthropic.com/settings/keys',
     requiresKey: true,
   },
   {

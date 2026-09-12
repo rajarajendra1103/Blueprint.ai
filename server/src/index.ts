@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // allow flexible development and preview
+  contentSecurityPolicy: false, 
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -50,6 +50,13 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[Blueprint.ai Server] Running stateless API on http://localhost:${PORT}`);
 });
+
+// Configure long-running timeouts for AI synthesis to prevent ERR_EMPTY_RESPONSE
+server.timeout = 600000; // 10 minutes
+server.headersTimeout = 605000; // 10 minutes + 5s
+server.requestTimeout = 600000;
+server.keepAliveTimeout = 600000;
+

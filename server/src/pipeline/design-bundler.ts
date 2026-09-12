@@ -6,6 +6,7 @@ import {
 } from '@blueprint/shared';
 import { getAdapter } from '../adapters';
 import { buildDesignPrompt } from '../prompts/design.prompt';
+import { extractAndParseJson } from '../utils/json-parser';
 
 // Domain-Adaptive Presets for guaranteed coherent design dimensions
 export const COMPATIBILITY_PRESETS: Record<string, DesignDirection> = {
@@ -253,8 +254,7 @@ export async function generateDesignDirections(
       temperature: 0.4,
     });
 
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = extractAndParseJson(raw);
 
     if (Array.isArray(parsed.directions) && parsed.directions.length >= 2) {
       return {

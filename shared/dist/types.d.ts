@@ -1,4 +1,4 @@
-export type LLMProviderId = 'gemini' | 'openrouter' | 'grok' | 'nvidia';
+export type LLMProviderId = 'gemini' | 'claude' | 'anthropic' | 'openrouter' | 'grok' | 'nvidia';
 export interface ProviderMeta {
     id: LLMProviderId;
     name: string;
@@ -61,6 +61,7 @@ export interface SpecSection {
     content: string;
     originalContent?: string;
     hasBeenEdited?: boolean;
+    isCustomGenerated?: boolean;
     parsedData?: any;
     tags?: string[];
     isApproved?: boolean;

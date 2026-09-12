@@ -26,13 +26,14 @@ function extractProviderConfig(body: any): UserProviderConfig {
 // POST /api/generate/spec
 router.post('/spec', async (req: Request, res: Response) => {
   try {
-    const { idea, classification } = req.body;
+    const { idea, classification, hybrid } = req.body;
     if (!idea || !classification) {
       return res.status(400).json({ error: 'Missing idea or classification context in request body.' });
     }
 
     const config = extractProviderConfig(req.body);
-    const specDoc = await generateFullSpec(idea, classification, config);
+    const isHybrid = hybrid !== undefined ? Boolean(hybrid) : true;
+    const specDoc = await generateFullSpec(idea, classification, config, { hybrid: isHybrid });
 
     return res.json({ specDoc });
   } catch (err: any) {

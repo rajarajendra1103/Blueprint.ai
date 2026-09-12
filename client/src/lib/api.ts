@@ -67,7 +67,8 @@ export async function classifyIdea(idea: string, config: UserProviderConfig): Pr
 export async function generateFullSpec(
   idea: string,
   classification: ClassificationResult,
-  config: UserProviderConfig
+  config: UserProviderConfig,
+  hybrid: boolean = true
 ): Promise<SpecDoc> {
   const res = await fetch(`${API_BASE}/generate/spec`, {
     method: 'POST',
@@ -78,6 +79,7 @@ export async function generateFullSpec(
       provider: config.provider,
       apiKey: config.apiKey,
       model: config.model,
+      hybrid,
     }),
   });
 

@@ -36,10 +36,12 @@ class NvidiaAdapter {
             throw new Error(`NVIDIA NIM API Error (${response.status}): ${errJson?.detail || errJson?.title || errText}`);
         }
         const data = (await response.json());
-        const content = data.choices?.[0]?.message?.content;
+        let content = data.choices?.[0]?.message?.content;
         if (!content) {
             throw new Error('NVIDIA NIM returned empty response');
         }
+        // Strip guardrail/safety filter preambles (e.g., Nemotron "User Safety: safe")
+        content = content.replace(/^(?:User\s+Safety|Safety|Content\s+Filter|Moderation):\s*(?:safe|unsafe|passed|pass|ok)\s*\n*/i, '').trim();
         return content;
     }
     async validateKey(apiKey, _model) {

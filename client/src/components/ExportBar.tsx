@@ -307,12 +307,12 @@ export const ExportBar: React.FC = () => {
             )}
             <div className="text-left">
               <div className="font-bold text-sm leading-tight">
-                {isPdfExporting ? 'Rendering All Sections & Diagrams…' : 'Download Full Pipeline PDF'}
+                {isPdfExporting ? 'Rendering All Sections & Diagrams…' : 'Open Full Blueprint (Print & Save as PDF)'}
               </div>
               <div className="text-[11px] text-white/75 font-normal leading-tight mt-0.5">
                 {isPdfExporting
                   ? 'Pre-rendering all Mermaid flowcharts to SVG…'
-                  : `All ${Object.keys(specDoc.sections).length} sections · Flowchart diagrams · Tech stack · Design system`}
+                  : `All ${Object.keys(specDoc.sections).length} sections · Flowcharts & ERD · Tech Stack · Design System (Print-Ready Tab)`}
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ exports.getDomainAdaptivePresets = getDomainAdaptivePresets;
 exports.generateDesignDirections = generateDesignDirections;
 const adapters_1 = require("../adapters");
 const design_prompt_1 = require("../prompts/design.prompt");
+const json_parser_1 = require("../utils/json-parser");
 // Domain-Adaptive Presets for guaranteed coherent design dimensions
 exports.COMPATIBILITY_PRESETS = {
     cyberMonoline: {
@@ -243,8 +244,7 @@ async function generateDesignDirections(idea, classification, config) {
             responseFormatJson: true,
             temperature: 0.4,
         });
-        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-        const parsed = JSON.parse(cleaned);
+        const parsed = (0, json_parser_1.extractAndParseJson)(raw);
         if (Array.isArray(parsed.directions) && parsed.directions.length >= 2) {
             return {
                 directions: [parsed.directions[0], parsed.directions[1]],
