@@ -20,15 +20,17 @@ Thank you for your interest in contributing to **Blueprint.ai**! Community contr
 
 ### 3. Pull Requests (PRs)
 1. **Fork** the repository to your own GitHub account.
-2. **Clone** your fork locally:
-   ```bash
-   git clone https://github.com/rajarajendra1103/Blueprint.ai.git
-   cd Blueprint.ai
-   ```
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+2. **Clone & Setup locally**:
+   - **1-Command Quickstart:**
+     ```bash
+     git clone https://github.com/rajarajendra1103/Blueprint.ai.git && cd Blueprint.ai && npm install
+     ```
+   - Or run step-by-step:
+     ```bash
+     git clone https://github.com/rajarajendra1103/Blueprint.ai.git
+     cd Blueprint.ai
+     npm install
+     ```
 4. **Create a new branch**:
    ```bash
    git checkout -b feature/your-feature-name

@@ -58,13 +58,31 @@ Blueprint.ai is a full-stack, AI-native architectural engine with Bring-Your-Own
 * [Node.js](https://nodejs.org/) (v18 or higher recommended)
 * npm (v9 or higher)
 
-### Installation
+### ⚡ 1-Command Download & Run (Quick Start)
+
+Run this single command in your terminal to clone, install, and launch everything in one go:
+
+**macOS / Linux / Git Bash:**
+```bash
+git clone https://github.com/rajarajendra1103/Blueprint.ai.git && cd Blueprint.ai && npm install && npm run dev
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/rajarajendra1103/Blueprint.ai.git; cd Blueprint.ai; npm install; npm run dev
+```
+
+Or on Windows, simply clone and double-click `setup.bat`.
+
+---
+
+### Step-by-Step Manual Setup
 
 Clone the repository and install all monorepo dependencies:
 
 ```bash
-git clone https://github.com/your-username/blueprint-ai.git
-cd blueprint-ai
+git clone https://github.com/rajarajendra1103/Blueprint.ai.git
+cd Blueprint.ai
 npm install
 ```
 
