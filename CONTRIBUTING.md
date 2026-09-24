@@ -22,7 +22,7 @@ Thank you for your interest in contributing to **Blueprint.ai**! Community contr
 1. **Fork** the repository to your own GitHub account.
 2. **Clone** your fork locally:
    ```bash
-   git clone https://github.com/<your-username>/Blueprint.ai.git
+   git clone https://github.com/rajarajendra1103/Blueprint.ai.git
    cd Blueprint.ai
    ```
 3. **Install dependencies**:
