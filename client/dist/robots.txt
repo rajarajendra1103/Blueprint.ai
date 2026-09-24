@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://blueprintaihub.netlify.app/sitemap.xml

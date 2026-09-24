@@ -9,7 +9,10 @@ import {
   UserProviderConfig,
 } from '@blueprint/shared';
 
-const API_BASE = '/api';
+const envBase = import.meta.env.VITE_API_BASE_URL;
+const API_BASE = envBase 
+  ? (envBase.replace(/\/+$/, '').endsWith('/api') ? envBase.replace(/\/+$/, '') : `${envBase.replace(/\/+$/, '')}/api`)
+  : '/api';
 
 async function handleResponse<T>(res: Response, defaultErrMsg: string): Promise<T> {
   const text = await res.text();
